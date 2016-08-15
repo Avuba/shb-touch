@@ -12,3 +12,4 @@ webpack.config.babel.js
 # ignored by default: node_modules
 */
 !dist/
+!src/
