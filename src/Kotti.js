@@ -14,33 +14,30 @@ let defaults = {
     // allow momentum based scrolling after touchend
     momentum: true,
 
-    // decide what axis to allow scrolling on, gets translated into an array by
-    // the class constructor
+    // decide what axis to allow scrolling on, gets translated into an array by the
+    // class constructor
     axis: 'xy',
 
-    // lock movement in one direction. relevant if more touch/scroll libraries
-    // are at the same spot and only the locked element should move
+    // lock movement in one direction. relevant if more touch/scroll libraries are at the same spot
+    // and only the locked element should move
     lock: false,
 
-    // if it should also stop touchend events when scrolling in one direction.
-    // this will mess up things that depend on clicks (ionic on-tap, for instance)
-    // beause the listener will get an touchstart but not a touchend... so the next
-    // tap or click may not work
+    // stop touchend events when scrolling in one direction. beware: listeners down the dom will get
+    // touchstart but not touchend; on ionic, the first subesequent tap won't register register
     stopEndEventWhenLocked: false,
 
     // preventing the default event can also prevent child ionic elems from scrolling
     preventDefaultEvents: false,
 
-    // don't trigger momentum scrolling in case the distance between touchstart
-    // and touchEnd is less than minPxForMomentum
+    // don't trigger momentum scrolling in case the distance between touchstart and touchEnd is less
+    // than minPxForMomentum
     minPxForMomentum: 3,
 
-    // maximal number of points we check for calculating the speed of momentum
-    // on touchEnd
+    // maximal number of points we check for calculating the speed of momentum on touchEnd
     maxPointsForMomentum: 3,
 
-    // if the time between the last touchmove event and touchEnd is larger than
-    // this value, we don't start the momentum
+    // if the time between the last touchmove event and touchEnd is larger than this value, we
+    // don't start the momentum
     maxTimeDiffForMomentum: 66
   },
 
@@ -84,9 +81,9 @@ let defaults = {
 
 const events = {
   pushBy: 'pushBy',
-  touchStart: 'touchStart',
-  touchEnd: 'touchEnd',
-  momentum: 'momentum'
+  touchStart: 'kottiTouchStart',
+  touchEnd: 'kottiTouchEnd',
+  momentum: 'finishedTouchWithMomentum'
 };
 
 
@@ -203,8 +200,8 @@ export default class Kotti {
   _onTouchStart(event) {
     if (!this._private.isEnabled) return;
 
-    if (this._config.preventDefaultEvents)
-      event.preventDefault();
+    if (this._config.preventDefaultEvents) event.preventDefault();
+
     this._state.isTouchActive = true;
     this.dispatchEvent(new Event(events.touchStart));
 
@@ -212,6 +209,7 @@ export default class Kotti {
     // the movements should be ignored has already happened
     if (event.touches.length < 2) {
       this._private.ignoreMovements = false;
+      this._private.stopEvents = false;
       this._private.moveCount = 0;
     }
 
@@ -222,8 +220,7 @@ export default class Kotti {
   _onTouchMove(event) {
     if (!this._private.isEnabled) return;
 
-    if (this._config.preventDefaultEvents)
-      event.preventDefault();
+    if (this._config.preventDefaultEvents) event.preventDefault();
 
     if (this._private.ignoreMovements) return;
 
@@ -322,12 +319,15 @@ export default class Kotti {
           distanceOnTargetAxis = Math.abs(newTouchPoint[targetAxis] - this._private.startPoint[targetAxis]),
           distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
 
-        // ignore all further events in case the movement of the finger has not
-        // followed the locked direction
-        if (distanceOnOppositeAxis > distanceOnTargetAxis)
+        // ignore all further events in case the movement of the finger has not followed the
+        // locked direction
+        if (distanceOnOppositeAxis > distanceOnTargetAxis) {
           this._private.ignoreMovements = true;
-        else
+        }
+        // otherwise, stop propagation of further events
+        else {
           this._private.stopEvents = true;
+        }
       }
     }
 
@@ -338,8 +338,7 @@ export default class Kotti {
   _onTouchEnd(event) {
     if (!this._private.isEnabled) return;
 
-    if (this._config.preventDefaultEvents)
-      event.preventDefault();
+    if (this._config.preventDefaultEvents) event.preventDefault();
 
     // this forces the re-creation of all touch properties when calling _checkForSetNewStartParams()
     // on line 198 inside _onTouchMove()
@@ -355,10 +354,9 @@ export default class Kotti {
     if (!this._config.momentum) return;
     if (this._private.ignoreMovements) return;
 
-    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) {
-      //console.log('Stopping event', event.type);
-      utils.default.stopEvent(event);
-    }
+    // the end event can be stopped when the scrolling direction is locked, otherwise some events
+    // (like ionic's on-tap) may still fire after scrolling
+    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) utils.default.stopEvent(event);
 
     if (Date.now() - this._private.timestamps.move > this._config.maxTimeDiffForMomentum) return;
 
@@ -403,8 +401,7 @@ export default class Kotti {
   _onTouchCancel(event) {
     if (!this._private.isEnabled) return;
 
-    if (this._config.preventDefaultEvents)
-      event.preventDefault();
+    if (this._config.preventDefaultEvents) event.preventDefault();
 
     this._state.isTouchActive = false;
   }
