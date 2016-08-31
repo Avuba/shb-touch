@@ -4,8 +4,8 @@ import { default as utils } from './utils.js';
 
 let defaults = {
   config: {
-    // main container for defining the boundaries of the scrollable area and
-    // setting the event listeners. is expected to be a simple DOM node
+    // main container for defining the boundaries of the scrollable area and setting the event
+    // listeners. is expected to be a simple DOM node
     container: null,
 
     // capture touch events before they can reach other DOM nodes
@@ -14,24 +14,30 @@ let defaults = {
     // allow momentum based scrolling after touchend
     momentum: true,
 
-    // decide what axis to allow scrolling on, gets translated into an array by
-    // the class constructor
+    // decide what axis to allow scrolling on, gets translated into an array by the class
+    // constructor
     axis: 'xy',
 
-    // lock movement in one direction. relevant if more touch/scroll libraries
-    // are at the same spot and only the locked element should move
+    // lock movement in one direction. relevant if more touch/scroll libraries are at the same spot
+    // and only the locked element should move
     lock: false,
 
-    // don't trigger momentum scrolling in case the distance between touchstart
-    // and touchEnd is less than minPxForMomentum
+    // stop touchend events when scrolling in one direction. beware: listeners down the dom will get
+    // touchstart but not touchend; on ionic, the first subesequent tap won't register
+    stopEndEventWhenLocked: false,
+
+    // preventing the default event can also prevent child ionic elems from scrolling
+    preventDefaultEvents: false,
+
+    // don't trigger momentum scrolling in case the distance between touchstart and touchEnd is less
+    // than minPxForMomentum
     minPxForMomentum: 3,
 
-    // maximal number of points we check for calculating the speed of momentum
-    // on touchEnd
+    // maximal number of points we check for calculating the speed of momentum on touchEnd
     maxPointsForMomentum: 3,
 
-    // if the time between the last touchmove event and touchEnd is larger than
-    // this value, we don't start the momentum
+    // if the time between the last touchmove event and touchEnd is larger than this value, we
+    // don't start the momentum
     maxTimeDiffForMomentum: 66
   },
 
@@ -39,6 +45,7 @@ let defaults = {
     isEnabled: true,
     boundHandlers: {},
     ignoreMovements: false,
+    stopEvents: false,
     moveCount: 0,
     startPoint: null,
     path: {
@@ -73,10 +80,10 @@ let defaults = {
 
 
 const events = {
-  pushBy: 'pushBy',
-  touchStart: 'touchStart',
-  touchEnd: 'touchEnd',
-  momentum: 'momentum'
+  pushBy: 'kotti:pushBy',
+  touchStart: 'kotti:TouchStart',
+  touchEnd: 'kotti:TouchEnd',
+  finishedTouchWithMomentum: 'kotti:finishedTouchWithMomentum'
 };
 
 
@@ -114,11 +121,12 @@ export default class Kotti {
         this._private.speed[xy].length = 0;
       });
 
-      this._state.isTouchActive = false;
-
-      // publish a touchEnd event so that subscribers aren't left under the impression that there is
-      // still a meaningful touch hanging
-      this.dispatchEvent(new Event(events.touchEnd));
+      if (this._state.isTouchActive) {
+        this._state.isTouchActive = false;
+        // publish a touchEnd event so that subscribers aren't left under the impression that there
+        // is still a meaningful touch hanging
+        this.dispatchEvent(new Event(events.touchEnd));
+      }
     }
   }
 
@@ -192,7 +200,8 @@ export default class Kotti {
   _onTouchStart(event) {
     if (!this._private.isEnabled) return;
 
-    event.preventDefault();
+    if (this._config.preventDefaultEvents) event.preventDefault();
+
     this._state.isTouchActive = true;
     this.dispatchEvent(new Event(events.touchStart));
 
@@ -200,6 +209,7 @@ export default class Kotti {
     // the movements should be ignored has already happened
     if (event.touches.length < 2) {
       this._private.ignoreMovements = false;
+      this._private.stopEvents = false;
       this._private.moveCount = 0;
     }
 
@@ -209,7 +219,8 @@ export default class Kotti {
 
   _onTouchMove(event) {
     if (!this._private.isEnabled) return;
-    event.preventDefault();
+
+    if (this._config.preventDefaultEvents) event.preventDefault();
 
     if (this._private.ignoreMovements) return;
 
@@ -239,9 +250,9 @@ export default class Kotti {
 
       // SET DIRECTION
 
-      // relativeDelta === 0 usually happens when the user changes direction and
-      // the finger remains at the same place for a few milliseconds. we asume a
-      // direction change and simple invert the direction
+      // relativeDelta === 0 usually happens when the user changes direction and the finger remains
+      // at the same place for a few milliseconds. we asume a direction change and simple invert
+      // the direction
       if (relativeDelta === 0) {
         newDirection[xy] = this._private.direction[xy] * -1;
       }
@@ -252,9 +263,9 @@ export default class Kotti {
 
       // PROCSS DIRECTION CHANGE
 
-      // check if direction has changed and update the movement related
-      // parameters if yes. prevDirection !== 0 helps avoiding changing the
-      // direction on the first call of the 'touchmove' event
+      // check if direction has changed and update the movement related parameters if yes.
+      // prevDirection !== 0 helps avoiding changing the direction on the first call of the
+      // 'touchmove' event
       if (newDirection[xy] !== this._private.direction[xy]
           && this._private.prevDirection[xy] !== 0
             && this._private.prevDirection[xy] !== -0) {
@@ -278,28 +289,27 @@ export default class Kotti {
 
     // if the movement is locked to one direction, we need to figure out if:
     //
-    // - #1: the finger has succesfully followed this direction so far and
-    // therfore all other potential move listeners need to be blocked (which
-    // means other scroll libraries at the same spot will not get triggered)
+    // - #1: the finger has succesfully followed this direction so far and therefore all other
+    // potential move listeners need to be blocked (which means other scroll libraries at the same
+    // spot will not get triggered)
     //
     // or:
     //
-    // - #2: the finger has not followed this direction so far and therfore all
-    // move events need to be ignored (therfore giving other scroll libraries at
-    // the same spot the chance to capture the move event)
+    // - #2: the finger has not followed this direction so far and therfore all move events need to
+    // be ignored (therfore giving other scroll libraries at the same spot the chance to capture
+    // the move event)
     if (this._config.lock) {
-      // stop event propagation in case of lock === true and therefore block the
-      // event for all other potential listerns. if ignoreMovements === true,
-      // this section does not get entered at all and therefore stopEvent() will
-      // not get triggered
+      // stop event propagation in case of lock === true and therefore block the event for all other
+      // potential listerns. if ignoreMovements === true, this section does not get entered at all
+      // and therefore stopEvent() will not get triggered
       utils.stopEvent(event);
 
-      // only enter the following area in case the moveCount is still below 2,
-      // ignore the area and publish the push event if otherwise
+      // only enter the following area in case the moveCount is still below 2, ignore the area and
+      // publish the push event if otherwise
       if (this._private.moveCount < 2) {
-        // count the amount of move events we've received so far. a minimum of
-        // 2 is required to make an accurate assumpation in what direction the
-        // user moves his finger, don't proceed otherwise
+        // count the amount of move events we've received so far. a minimum of 2 is required to make
+        // an accurate assumpation in what direction the user moves his finger, don't proceed
+        // otherwise
         this._private.moveCount++;
         if (this._private.moveCount < 2) return;
 
@@ -308,9 +318,15 @@ export default class Kotti {
           distanceOnTargetAxis = Math.abs(newTouchPoint[targetAxis] - this._private.startPoint[targetAxis]),
           distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
 
-        // ignore all further events in case the movement of the finger has not
-        // followed the locked direction
-        if (distanceOnOppositeAxis > distanceOnTargetAxis) this._private.ignoreMovements = true;
+        // ignore all further events in case the movement of the finger has not followed the locked
+        // direction
+        if (distanceOnOppositeAxis > distanceOnTargetAxis) {
+          this._private.ignoreMovements = true;
+        }
+        // otherwise, stop propagation of further events
+        else {
+          this._private.stopEvents = true;
+        }
       }
     }
 
@@ -320,7 +336,8 @@ export default class Kotti {
 
   _onTouchEnd(event) {
     if (!this._private.isEnabled) return;
-    event.preventDefault();
+
+    if (this._config.preventDefaultEvents) event.preventDefault();
 
     // this forces the re-creation of all touch properties when calling _checkForSetNewStartParams()
     // on line 198 inside _onTouchMove()
@@ -335,6 +352,11 @@ export default class Kotti {
 
     if (!this._config.momentum) return;
     if (this._private.ignoreMovements) return;
+
+    // the end event can be stopped when the scrolling direction is locked, otherwise some events
+    // (like ionic's on-tap) may still fire after scrolling
+    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) utils.default.stopEvent(event);
+
     if (Date.now() - this._private.timestamps.move > this._config.maxTimeDiffForMomentum) return;
 
     let momentum = {
@@ -351,16 +373,15 @@ export default class Kotti {
 
       // CALCULATE VELOCITY
 
-      // we try to determine the speed of momentum by calculating the average
-      // scroll speed of the last maxPointsForMomentum touchmove events. we
-      // choose less pointsToConsider in case the last user interaction had less
-      // than maxPointsForMomentum touchmove events
+      // we try to determine the speed of momentum by calculating the average scroll speed of the
+      // last maxPointsForMomentum touchmove events. we choose less pointsToConsider in case the
+      // last user interaction had less than maxPointsForMomentum touchmove events
       let speedPoints = this._private.speed[xy],
         pointsToConsider = speedPoints.length < this._config.maxPointsForMomentum ? speedPoints.length : this._config.maxPointsForMomentum,
         avgPxPerFrame = 0;
 
-      // calculate the average values by iterating of the 'speedPoints' array
-      // within the range of 'pointsToConsider'
+      // calculate the average values by iterating of the 'speedPoints' array within the range of
+      // 'pointsToConsider'
       for (let i = speedPoints.length - 1; i >= speedPoints.length - pointsToConsider; i--) {
         avgPxPerFrame = avgPxPerFrame + (speedPoints[i].px / pointsToConsider);
       }
@@ -377,7 +398,8 @@ export default class Kotti {
 
   _onTouchCancel(event) {
     if (!this._private.isEnabled) return;
-    event.preventDefault();
+
+    if (this._config.preventDefaultEvents) event.preventDefault();
 
     this._state.isTouchActive = false;
   }
