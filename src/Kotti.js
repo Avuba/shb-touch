@@ -23,7 +23,7 @@ let defaults = {
     lock: false,
 
     // stop touchend events when scrolling in one direction. beware: listeners down the dom will get
-    // touchstart but not touchend; on ionic, the first subesequent tap won't register register
+    // touchstart but not touchend; on ionic, the first subesequent tap won't register
     stopEndEventWhenLocked: false,
 
     // preventing the default event can also prevent child ionic elems from scrolling
