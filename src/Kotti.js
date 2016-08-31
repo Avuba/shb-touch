@@ -22,6 +22,15 @@ let defaults = {
     // are at the same spot and only the locked element should move
     lock: false,
 
+    // if it should also stop touchend events when scrolling in one direction.
+    // this will mess up things that depend on clicks (ionic on-tap, for instance)
+    // beause the listener will get an touchstart but not a touchend... so the next
+    // tap or click may not work
+    stopEndEventWhenLocked: false,
+
+    // preventing the default event can also prevent child ionic elems from scrolling
+    preventDefaultEvents: false,
+
     // don't trigger momentum scrolling in case the distance between touchstart
     // and touchEnd is less than minPxForMomentum
     minPxForMomentum: 3,
@@ -39,6 +48,7 @@ let defaults = {
     isEnabled: true,
     boundHandlers: {},
     ignoreMovements: false,
+    stopEvents: false,
     moveCount: 0,
     startPoint: null,
     path: {
@@ -114,11 +124,12 @@ export default class Kotti {
         this._private.speed[xy].length = 0;
       });
 
-      this._state.isTouchActive = false;
-
-      // publish a touchEnd event so that subscribers aren't left under the impression that there is
-      // still a meaningful touch hanging
-      this.dispatchEvent(new Event(events.touchEnd));
+      if (this._state.isTouchActive) {
+        this._state.isTouchActive = false;
+        // publish a touchEnd event so that subscribers aren't left under the impression that there is
+        // still a meaningful touch hanging
+        this.dispatchEvent(new Event(events.touchEnd));
+      }
     }
   }
 
@@ -192,7 +203,8 @@ export default class Kotti {
   _onTouchStart(event) {
     if (!this._private.isEnabled) return;
 
-    event.preventDefault();
+    if (this._config.preventDefaultEvents)
+      event.preventDefault();
     this._state.isTouchActive = true;
     this.dispatchEvent(new Event(events.touchStart));
 
@@ -209,7 +221,9 @@ export default class Kotti {
 
   _onTouchMove(event) {
     if (!this._private.isEnabled) return;
-    event.preventDefault();
+
+    if (this._config.preventDefaultEvents)
+      event.preventDefault();
 
     if (this._private.ignoreMovements) return;
 
@@ -310,7 +324,10 @@ export default class Kotti {
 
         // ignore all further events in case the movement of the finger has not
         // followed the locked direction
-        if (distanceOnOppositeAxis > distanceOnTargetAxis) this._private.ignoreMovements = true;
+        if (distanceOnOppositeAxis > distanceOnTargetAxis)
+          this._private.ignoreMovements = true;
+        else
+          this._private.stopEvents = true;
       }
     }
 
@@ -320,7 +337,9 @@ export default class Kotti {
 
   _onTouchEnd(event) {
     if (!this._private.isEnabled) return;
-    event.preventDefault();
+
+    if (this._config.preventDefaultEvents)
+      event.preventDefault();
 
     // this forces the re-creation of all touch properties when calling _checkForSetNewStartParams()
     // on line 198 inside _onTouchMove()
@@ -335,6 +354,12 @@ export default class Kotti {
 
     if (!this._config.momentum) return;
     if (this._private.ignoreMovements) return;
+
+    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) {
+      //console.log('Stopping event', event.type);
+      utils.default.stopEvent(event);
+    }
+
     if (Date.now() - this._private.timestamps.move > this._config.maxTimeDiffForMomentum) return;
 
     let momentum = {
@@ -377,7 +402,9 @@ export default class Kotti {
 
   _onTouchCancel(event) {
     if (!this._private.isEnabled) return;
-    event.preventDefault();
+
+    if (this._config.preventDefaultEvents)
+      event.preventDefault();
 
     this._state.isTouchActive = false;
   }
