@@ -80,10 +80,10 @@ let defaults = {
 
 
 const events = {
-  pushBy: 'pushBy',
-  touchStart: 'kottiTouchStart',
-  touchEnd: 'kottiTouchEnd',
-  momentum: 'finishedTouchWithMomentum'
+  pushBy: 'kotti:pushBy',
+  touchStart: 'kotti:TouchStart',
+  touchEnd: 'kotti:TouchEnd',
+  finishedTouchWithMomentum: 'kotti:finishedTouchWithMomentum'
 };
 
 
