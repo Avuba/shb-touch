@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+
+  <title>Kotti Kitchensink</title>
+
+  <style>
+    .container {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      width: 300px;
+      height: 450px;
+      background: #eee;
+      overflow: hidden;
+    }
+
+    .moveable {
+      width: 1000px;
+      height: 1000px;
+      background: url('pattern-01.jpg');
+      transform: translate3d(0px, 0px, 0px);
+      will-change: transform;
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="container" id="container-1">
+    <div class="moveable" id="moveable-1"></div>
+  </div>
+
+  <script src="Kotti.js" charset="utf-8"></script>
+  <script type="text/javascript">
+    // testing
+    var container1 = document.getElementById('container-1');
+    var moveable1 = document.getElementById('moveable-1');
+
+    var kotti1 = new Kotti({
+      container: container1
+    });
+
+    var position1 = { x: 0, y: 0};
+
+    kotti1.addEventListener(kotti1.events.pushBy, function(event) {
+      position1.x += (event.data.x.px * event.data.x.direction);
+      position1.y += (event.data.y.px * event.data.y.direction);
+      requestAnimationFrame(function() {
+        moveable1.style.webkitTransform = 'translate3d(' + position1.x +'px, ' + position1.y + 'px, 0px)';
+      });
+    })
+
+    kotti1.addEventListener(kotti1.events.momentum, function(event) {
+      var momentumX = event.data.x.pxPerFrame * event.data.x.direction;
+      var momentumY = event.data.y.pxPerFrame * event.data.y.direction;
+      console.log('Kotti momentum: (' + momentumX.toFixed() + ',' + momentumY.toFixed() + ')');
+    })
+
+  </script>
+</body>
+
+</html>
