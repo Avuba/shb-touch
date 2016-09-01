@@ -355,7 +355,7 @@ export default class Kotti {
 
     // the end event can be stopped when the scrolling direction is locked, otherwise some events
     // (like ionic's on-tap) may still fire after scrolling
-    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) utils.default.stopEvent(event);
+    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) utils.stopEvent(event);
 
     if (Date.now() - this._private.timestamps.move > this._config.maxTimeDiffForMomentum) return;
 
