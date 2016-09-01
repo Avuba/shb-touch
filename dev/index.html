@@ -54,7 +54,7 @@
       });
     })
 
-    kotti1.addEventListener(kotti1.events.momentum, function(event) {
+    kotti1.addEventListener(kotti1.events.finishedTouchWithMomentum, function(event) {
       var momentumX = event.data.x.pxPerFrame * event.data.x.direction;
       var momentumY = event.data.y.pxPerFrame * event.data.y.direction;
       console.log('Kotti momentum: (' + momentumX.toFixed() + ',' + momentumY.toFixed() + ')');
