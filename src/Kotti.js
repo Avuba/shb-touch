@@ -209,11 +209,7 @@ export default class Kotti {
 
 
   _onTouchMove(event) {
-    if (!this._private.isEnabled) return;
-
-    if (this._private.ignoreMovements) {
-      return;
-    }
+    if (!this._private.isEnabled || this._private.ignoreMovements) return;
 
     let newTouchPoint = this._eventToPoint(event);
 
@@ -232,6 +228,7 @@ export default class Kotti {
       // a minimum of 2 movements is required to make an accurate assumption in what direction the
       // user moves his finger; if we have less, suppress the events and don't proceed
       this._private.moveCount++;
+
       if (this._private.moveCount < 2) {
         event.preventDefault();
         utils.stopEvent(event);
@@ -243,8 +240,8 @@ export default class Kotti {
         distanceOnTargetAxis = Math.abs(newTouchPoint[targetAxis] - this._private.startPoint[targetAxis]),
         distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
 
-      // in case the movement of the finger has not followed the parent's scroll direction,
-      // stop here and ignore all further events (until a new touchstart)
+      // in case the movement of the finger has not followed the parent's scroll direction, stop
+      // here and ignore all further events (until a new touchstart)
       if (distanceOnOppositeAxis > distanceOnTargetAxis) {
         this._private.ignoreMovements = true;
         return;
