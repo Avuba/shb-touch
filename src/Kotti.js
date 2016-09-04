@@ -299,7 +299,7 @@ export default class Kotti {
       // 'touchmove' event
       if (newDirection[xy] !== this._private.direction[xy]
           && this._private.prevDirection[xy] !== 0
-            && this._private.prevDirection[xy] !== -0) {
+          && this._private.prevDirection[xy] !== -0) {
         // clear all previously stored values as they are now invalid
         this._private.path[xy].length = 0;
         this._private.speed[xy].length = 0;
@@ -337,7 +337,6 @@ export default class Kotti {
     this.dispatchEvent(new Event(events.touchEnd));
 
     if (!this._config.momentum) return;
-
     if (Date.now() - this._private.timestamps.move > this._config.maxTimeDiffForMomentum) return;
 
     let momentum = {
@@ -379,7 +378,6 @@ export default class Kotti {
 
   _onTouchCancel(event) {
     if (!this._private.isEnabled) return;
-
     this._state.isTouchActive = false;
   }
 
