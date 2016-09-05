@@ -211,6 +211,10 @@ export default class Kotti {
   _onTouchMove(event) {
     if (!this._private.isEnabled || this._private.ignoreMovements) return;
 
+    // we need to re-create all stored touch properties in case the finger changed. this function
+    // checks if a new finger is active
+    this._checkForSetNewStartParams(event);
+
     let newTouchPoint = this._eventToPoint(event);
 
     // if the Kotti is configured to lock movement in one direction, it will consider the first two
@@ -225,10 +229,10 @@ export default class Kotti {
     // - the movement is following the direction intended for scrolling the nested element,
     // therefore kotti will return immediately without affecting the the original  touchmove event
     if (this._config.lock && this._private.moveCount < 2) {
+
+      this._private.moveCount++;
       // a minimum of 2 movements is required to make an accurate assumption in what direction the
       // user moves his finger; if we have less, suppress the events and don't proceed
-      this._private.moveCount++;
-
       if (this._private.moveCount < 2) {
         event.preventDefault();
         utils.stopEvent(event);
@@ -255,10 +259,6 @@ export default class Kotti {
       event.preventDefault();
       utils.stopEvent(event);
     }
-
-    // we need to re-create all stored touch properties in case the finger changed. this function
-    // checks if a new finger is active
-    this._checkForSetNewStartParams(event);
 
     let pushBy = {
         x: { direction: 0, px: 0 },
