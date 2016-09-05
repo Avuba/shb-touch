@@ -22,13 +22,6 @@ let defaults = {
     // and only the locked element should move
     lock: false,
 
-    // stop touchend events when scrolling in one direction. beware: listeners down the dom will get
-    // touchstart but not touchend; on ionic, the first subesequent tap won't register
-    stopEndEventWhenLocked: false,
-
-    // preventing the default event can also prevent child ionic elems from scrolling
-    preventDefaultEvents: false,
-
     // don't trigger momentum scrolling in case the distance between touchstart and touchEnd is less
     // than minPxForMomentum
     minPxForMomentum: 3,
@@ -200,13 +193,11 @@ export default class Kotti {
   _onTouchStart(event) {
     if (!this._private.isEnabled) return;
 
-    if (this._config.preventDefaultEvents) event.preventDefault();
-
     this._state.isTouchActive = true;
     this.dispatchEvent(new Event(events.touchStart));
 
     // in case more than one finger is active, we assume that the necessary logic for checking if
-    // the movements should be ignored has already happened
+    // the movements should be ignored has already happened, no resetting required
     if (event.touches.length < 2) {
       this._private.ignoreMovements = false;
       this._private.stopEvents = false;
@@ -218,11 +209,52 @@ export default class Kotti {
 
 
   _onTouchMove(event) {
-    if (!this._private.isEnabled) return;
+    if (!this._private.isEnabled || this._private.ignoreMovements) return;
 
-    if (this._config.preventDefaultEvents) event.preventDefault();
+    let newTouchPoint = this._eventToPoint(event);
 
-    if (this._private.ignoreMovements) return;
+    // if the Kotti is configured to lock movement in one direction, it will consider the first two
+    // touchmove events to decide if:
+    //
+    // - the movement is following the direction intended for scrolling the parent/owner,
+    // therefore the original touchmove events should be suppressed (and kotti will emit its own
+    // pushBy and momentum events)
+    //
+    // or
+    //
+    // - the movement is following the direction intended for scrolling the nested element,
+    // therefore kotti will return immediately without affecting the the original  touchmove event
+    if (this._config.lock && this._private.moveCount < 2) {
+      // a minimum of 2 movements is required to make an accurate assumption in what direction the
+      // user moves his finger; if we have less, suppress the events and don't proceed
+      this._private.moveCount++;
+
+      if (this._private.moveCount < 2) {
+        event.preventDefault();
+        utils.stopEvent(event);
+        return;
+      }
+
+      let targetAxis = this._private.axis[0],
+        oppositeAxis = targetAxis === 'x' ? 'y' : 'x',
+        distanceOnTargetAxis = Math.abs(newTouchPoint[targetAxis] - this._private.startPoint[targetAxis]),
+        distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
+
+      // in case the movement of the finger has not followed the parent's scroll direction, stop
+      // here and ignore all further events (until a new touchstart)
+      if (distanceOnOppositeAxis > distanceOnTargetAxis) {
+        this._private.ignoreMovements = true;
+        return;
+      }
+
+      // otherwise, stop propagation of further touchmove events
+      this._private.stopEvents = true;
+    }
+
+    if (this._private.stopEvents) {
+      event.preventDefault();
+      utils.stopEvent(event);
+    }
 
     // we need to re-create all stored touch properties in case the finger changed. this function
     // checks if a new finger is active
@@ -234,7 +266,6 @@ export default class Kotti {
       },
       newDirection = {},
       newTimeStamp = Date.now(),
-      newTouchPoint = this._eventToPoint(event),
       timeDiff = newTimeStamp - this._private.timestamps.move;
 
     this._forXY((xy) => {
@@ -268,7 +299,7 @@ export default class Kotti {
       // 'touchmove' event
       if (newDirection[xy] !== this._private.direction[xy]
           && this._private.prevDirection[xy] !== 0
-            && this._private.prevDirection[xy] !== -0) {
+          && this._private.prevDirection[xy] !== -0) {
         // clear all previously stored values as they are now invalid
         this._private.path[xy].length = 0;
         this._private.speed[xy].length = 0;
@@ -287,57 +318,12 @@ export default class Kotti {
     this._private.direction = newDirection;
     this._private.timestamps.move = newTimeStamp;
 
-    // if the movement is locked to one direction, we need to figure out if:
-    //
-    // - #1: the finger has succesfully followed this direction so far and therefore all other
-    // potential move listeners need to be blocked (which means other scroll libraries at the same
-    // spot will not get triggered)
-    //
-    // or:
-    //
-    // - #2: the finger has not followed this direction so far and therfore all move events need to
-    // be ignored (therfore giving other scroll libraries at the same spot the chance to capture
-    // the move event)
-    if (this._config.lock) {
-      // stop event propagation in case of lock === true and therefore block the event for all other
-      // potential listerns. if ignoreMovements === true, this section does not get entered at all
-      // and therefore stopEvent() will not get triggered
-      utils.stopEvent(event);
-
-      // only enter the following area in case the moveCount is still below 2, ignore the area and
-      // publish the push event if otherwise
-      if (this._private.moveCount < 2) {
-        // count the amount of move events we've received so far. a minimum of 2 is required to make
-        // an accurate assumpation in what direction the user moves his finger, don't proceed
-        // otherwise
-        this._private.moveCount++;
-        if (this._private.moveCount < 2) return;
-
-        let targetAxis = this._private.axis[0],
-          oppositeAxis = targetAxis === 'x' ? 'y' : 'x',
-          distanceOnTargetAxis = Math.abs(newTouchPoint[targetAxis] - this._private.startPoint[targetAxis]),
-          distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
-
-        // ignore all further events in case the movement of the finger has not followed the locked
-        // direction
-        if (distanceOnOppositeAxis > distanceOnTargetAxis) {
-          this._private.ignoreMovements = true;
-        }
-        // otherwise, stop propagation of further events
-        else {
-          this._private.stopEvents = true;
-        }
-      }
-    }
-
     this.dispatchEvent(new Event(events.pushBy), pushBy);
   }
 
 
   _onTouchEnd(event) {
     if (!this._private.isEnabled) return;
-
-    if (this._config.preventDefaultEvents) event.preventDefault();
 
     // this forces the re-creation of all touch properties when calling _checkForSetNewStartParams()
     // on line 198 inside _onTouchMove()
@@ -351,12 +337,6 @@ export default class Kotti {
     this.dispatchEvent(new Event(events.touchEnd));
 
     if (!this._config.momentum) return;
-    if (this._private.ignoreMovements) return;
-
-    // the end event can be stopped when the scrolling direction is locked, otherwise some events
-    // (like ionic's on-tap) may still fire after scrolling
-    if (this._config.stopEndEventWhenLocked && this._private.stopEvents) utils.stopEvent(event);
-
     if (Date.now() - this._private.timestamps.move > this._config.maxTimeDiffForMomentum) return;
 
     let momentum = {
@@ -398,9 +378,6 @@ export default class Kotti {
 
   _onTouchCancel(event) {
     if (!this._private.isEnabled) return;
-
-    if (this._config.preventDefaultEvents) event.preventDefault();
-
     this._state.isTouchActive = false;
   }
 
