@@ -197,7 +197,7 @@ export default class Kotti {
     this.dispatchEvent(new Event(events.touchStart));
 
     // in case more than one finger is active, we assume that the necessary logic for checking if
-    // the movements should be ignored has already happened
+    // the movements should be ignored has already happened, no resetting required
     if (event.touches.length < 2) {
       this._private.ignoreMovements = false;
       this._private.stopEvents = false;
