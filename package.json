@@ -1,6 +1,6 @@
 {
   "name": "kotti",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "standalone touch handler class for framework independent js ui components",
   "scripts": {
     "build": "webpack --mode=build",
