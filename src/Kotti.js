@@ -372,7 +372,9 @@ export default class Kotti {
       momentum[xy].pxPerFrame = avgPxPerFrame;
     });
 
-    this.dispatchEvent(new Event(events.finishedTouchWithMomentum), momentum);
+    if (momentum.x.pxPerFrame > 0 || momentum.y.pxPerFrame > 0) {
+      this.dispatchEvent(new Event(events.finishedTouchWithMomentum), momentum);
+    }
   }
 
 
