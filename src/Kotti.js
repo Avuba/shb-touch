@@ -318,6 +318,7 @@ export default class Kotti {
     this._private.direction = newDirection;
     this._private.timestamps.move = newTimeStamp;
 
+    if (pushBy.x.px === 0 && pushBy.y.px === 0) return;
     this.dispatchEvent(new Event(events.pushBy), pushBy);
   }
 
