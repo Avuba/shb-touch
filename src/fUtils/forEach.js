@@ -29,7 +29,7 @@ _export.forEach = function(source, action) {
   }
   else {
     // TODO: explain why this is the fastest method, link jsPerf
-    Object.keys(source).forEach((key) => {
+    Object.keys(source).forEach(function(key) {
       action(source[key], key);
     });
   }
@@ -64,14 +64,14 @@ _export.forEachReverse = function(source, action) {
 
   if (source instanceof Array) {
     // TODO: explain why this is the fastest method, link jsPerf
-    let index = source.length;
+    var index = source.length;
     while (index--) {
       action(source[index], index);
     }
   }
   else {
     // TODO: explain why this is the fastest method, link jsPerf
-    Object.keys(source).reverse().forEach((key) => {
+    Object.keys(source).reverse().forEach(function(key) {
       action(source[key], key);
     });
   }

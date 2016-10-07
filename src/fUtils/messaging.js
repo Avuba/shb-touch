@@ -10,9 +10,9 @@ let _export = {};
  * @param {1,2,n} : arbitrary list of arguments
  */
 _export.error = function() {
-  let message = 'ERROR:';
+  var message = 'ERROR:';
 
-  fUtils.forEach(arguments, (argument) => {
+  fUtils.forEach(arguments, function(argument) {
     if (argument) message = message + '\n' + argument.toString();
   });
 
@@ -28,9 +28,9 @@ _export.error = function() {
  * @param {1,2,n} : arbitrary list of arguments
  */
 _export.warning = function() {
-  let message = 'WARNING:';
+  var message = 'WARNING:';
 
-  fUtils.forEach(arguments, (argument) => {
+  fUtils.forEach(arguments, function(argument) {
     if (argument) message = message + '\n' + argument.toString();
   });
 
