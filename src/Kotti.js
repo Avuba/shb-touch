@@ -314,7 +314,7 @@ export default class Kotti {
       pushBy[xy].px = Math.abs(relativeDelta);
     });
 
-    this._private.prevDirection = this._private.direction
+    this._private.prevDirection = this._private.direction;
     this._private.direction = newDirection;
     this._private.timestamps.move = newTimeStamp;
 
