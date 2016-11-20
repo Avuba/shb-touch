@@ -1,5 +1,5 @@
-import { default as fUtils } from './fUtils/index.js';
-import { default as utils } from './utils.js';
+import { default as fUtils } from './fUtils/index';
+import { default as utils } from './utils/utils';
 
 
 let defaults = {
@@ -72,15 +72,15 @@ let defaults = {
 };
 
 
-const events = {
-  pushBy: 'kotti:pushBy',
-  touchStart: 'kotti:TouchStart',
-  touchEnd: 'kotti:TouchEnd',
-  finishedTouchWithMomentum: 'kotti:finishedTouchWithMomentum'
+let events = {
+  pushBy: 'pushBy',
+  touchStart: 'touchStart',
+  touchEnd: 'touchEnd',
+  finishedTouchWithMomentum: 'finishedTouchWithMomentum'
 };
 
 
-export default class Kotti {
+export default class ShbTouch {
   constructor(config) {
     this.events = events;
 
@@ -217,17 +217,17 @@ export default class Kotti {
 
     let newTouchPoint = this._eventToPoint(event);
 
-    // if the Kotti is configured to lock movement in one direction, it will consider the first two
-    // touchmove events to decide if:
+    // if the ShbTouch is configured to lock movement in one direction, it will consider the first
+    // two touchmove events to decide if:
     //
     // - the movement is following the direction intended for scrolling the parent/owner,
-    // therefore the original touchmove events should be suppressed (and kotti will emit its own
+    // therefore the original touchmove events should be suppressed (and ShbTouch will emit its own
     // pushBy and momentum events)
     //
     // or
     //
     // - the movement is following the direction intended for scrolling the nested element,
-    // therefore kotti will return immediately without affecting the the original  touchmove event
+    // therefore ShbTouch will return immediately without affecting the the original  touchmove event
     if (this._config.lock && this._private.moveCount < 2) {
 
       this._private.moveCount++;

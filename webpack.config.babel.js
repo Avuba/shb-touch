@@ -35,13 +35,13 @@ if (shellArgs.minify === 'true' || shellArgs.minify === true) {
 
 
 module.exports = {
-  entry: './src/Kotti.js',
+  entry: './src/ShbTouch.js',
   output: {
     path: outputPath,
-    filename: 'Kotti.js',
+    filename: 'ShbTouch.js',
     // helps exposing library to the window object while still matching AMD /
     // commonJS / etc. requirements: https://github.com/umdjs/umd
-    library: 'Kotti',
+    library: 'ShbTouch',
     libraryTarget: 'umd',
     umdNamedDefine: true
   },
