@@ -1,5 +1,5 @@
-import { default as fUtils } from './fUtils/index';
 import { default as utils } from './utils/utils';
+import { default as lodash } from './utils/lodash';
 
 
 let defaults = {
@@ -84,11 +84,11 @@ export default class ShbTouch {
   constructor(config) {
     this.events = events;
 
-    this._config = fUtils.cloneDeep(defaults.config);
-    this._private = fUtils.cloneDeep(defaults.private);
-    this._state = fUtils.cloneDeep(defaults.state);
+    this._config = lodash.cloneDeep(defaults.config);
+    this._private = lodash.cloneDeep(defaults.private);
+    this._state = lodash.cloneDeep(defaults.state);
 
-    if (config) fUtils.mergeDeep(this._config, config);
+    if (config) lodash.merge(this._config, config);
 
     this._private.axis = this._config.axis.split('');
     // lock is not possible in case the movement should follow two axis
@@ -141,14 +141,14 @@ export default class ShbTouch {
       touchcancel: this._onTouchCancel.bind(this)
     };
 
-    fUtils.forEach(this._private.boundHandlers, (handler, event) => {
+    lodash.forEach(this._private.boundHandlers, (handler, event) => {
       this._config.container.addEventListener(event, handler, this._config.capture);
     });
   }
 
 
   _unbindEvents() {
-    fUtils.forEach(this._private.boundHandlers, (handler, event) => {
+    lodash.forEach(this._private.boundHandlers, (handler, event) => {
       this._config.container.removeEventListener(event, handler, this._config.capture);
     });
   }
@@ -161,7 +161,7 @@ export default class ShbTouch {
     let identifier = event.changedTouches[0].identifier,
       newActiveFinger = 0;
 
-    fUtils.forEach(event.touches, (touch, index) => {
+    lodash.forEach(event.touches, (touch, index) => {
       if (touch.identifier === identifier) newActiveFinger = index;
     });
 
@@ -272,7 +272,7 @@ export default class ShbTouch {
 
       // CALCULATE AND STORE PARAMTERS FOR FURTHER PROCESSING
 
-      let relativeDelta = this._private.path[xy].length ? newTouchPoint[xy] - fUtils.lastPosition(this._private.path[xy]) : 0;
+      let relativeDelta = this._private.path[xy].length ? newTouchPoint[xy] - lodash.last(this._private.path[xy]) : 0;
       this._private.path[xy].push(newTouchPoint[xy]);
       this._private.speed[xy].push({
         px: Math.abs(relativeDelta),
@@ -349,7 +349,7 @@ export default class ShbTouch {
 
       // CHECK IF DISTANCE FROM START IS LARGE ENOUGH
 
-      let distanceFromStart = Math.abs(fUtils.lastPosition(this._private.path[xy]) - this._private.path[xy][0]);
+      let distanceFromStart = Math.abs(lodash.last(this._private.path[xy]) - this._private.path[xy][0]);
       if (distanceFromStart < this._config.minPxForMomentum) return;
 
       // CALCULATE VELOCITY
