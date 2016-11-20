@@ -1,10 +1,10 @@
 {
-  "name": "kotti",
-  "version": "0.0.11",
-  "description": "standalone touch handler class for framework independent js ui components",
+  "name": "shb-touch",
+  "version": "0.0.1",
+  "description": "a standalone touch listener generating pushes and momentum",
   "scripts": {
     "lint-test": "eslint ./src/** --cache",
-    "lint-fix":  "eslint ./src/** --fix --cache",
+    "lint-fix": "eslint ./src/** --fix --cache",
     "build": "webpack --mode=build",
     "start": "webpack-dev-server --inline --mode=dev --host=0.0.0.0 --port=8080"
   },
@@ -26,16 +26,25 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/avuba/kotti.git"
+    "url": "git+https://github.com/avuba/shb-touch.git"
   },
   "author": "Avuba",
   "contributors": [
-      { "name": "Oliver Lukesch", "email": "oliver@avuba.de" },
-      { "name": "Tiago Martins", "email": "tiago@avuba.de" }
+    {
+      "name": "Oliver Lukesch",
+      "email": "oliver@avuba.de"
+    },
+    {
+      "name": "Tiago Martins",
+      "email": "tiago@avuba.de"
+    }
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/avuba/kotti/issues"
+    "url": "https://github.com/avuba/shb-touch/issues"
   },
-  "homepage": "https://github.com/avuba/kotti#readme"
+  "homepage": "https://github.com/avuba/shb-touch#readme",
+  "dependencies": {
+    "lodash": "^4.17.2"
+  }
 }
