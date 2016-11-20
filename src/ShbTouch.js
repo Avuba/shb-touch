@@ -35,7 +35,6 @@ let defaults = {
   },
 
   private: {
-    isEnabled: true,
     boundHandlers: {},
     ignoreMovements: false,
     stopEvents: false,
@@ -67,7 +66,8 @@ let defaults = {
   },
 
   state: {
-    isTouchActive: false
+    isTouchActive: false,
+    isScrollingDisabled: false
   }
 };
 
@@ -82,8 +82,6 @@ let events = {
 
 export default class ShbTouch {
   constructor(config) {
-    this.events = events;
-
     this._config = lodash.cloneDeep(defaults.config);
     this._private = lodash.cloneDeep(defaults.private);
     this._state = lodash.cloneDeep(defaults.state);
@@ -96,8 +94,8 @@ export default class ShbTouch {
     // lock forces capture to be true
     if (this._config.lock) this._config.capture = true;
 
+    this.events = events;
     utils.addEventTargetInterface(this);
-
     this._bindEvents();
   }
 
@@ -105,20 +103,21 @@ export default class ShbTouch {
   // PUBLIC
 
 
-  setEnabled(shouldEnable) {
-    this._private.isEnabled = shouldEnable;
+  disableScrolling(isDisabled) {
+    this._state.isScrollingDisabled = isDisabled;
 
-    if (!this._private.isEnabled && this._state.isTouchActive) {
+    if (this._state.isScrollingDisabled && this._state.isTouchActive) {
+      // clear the path so every future touch starts from a clean slate
       this._forXY((xy) => {
         this._private.path[xy].length = 0;
         this._private.speed[xy].length = 0;
       });
 
+      // publish a touchEnd event so that subscribers aren't left under the impression that there
+      // is still a meaningful touch hanging
       if (this._state.isTouchActive) {
-        this._state.isTouchActive = false;
-        // publish a touchEnd event so that subscribers aren't left under the impression that there
-        // is still a meaningful touch hanging
         this.dispatchEvent(new Event(events.touchEnd));
+        this._state.isTouchActive = false;
       }
     }
   }
@@ -141,20 +140,20 @@ export default class ShbTouch {
       touchcancel: this._onTouchCancel.bind(this)
     };
 
-    lodash.forEach(this._private.boundHandlers, (handler, event) => {
-      this._config.container.addEventListener(event, handler, this._config.capture);
+    lodash.forEach(this._private.boundHandlers, (handler, eventName) => {
+      this._config.container.addEventListener(eventName, handler, this._config.capture);
     });
   }
 
 
   _unbindEvents() {
-    lodash.forEach(this._private.boundHandlers, (handler, event) => {
-      this._config.container.removeEventListener(event, handler, this._config.capture);
+    lodash.forEach(this._private.boundHandlers, (handler, eventName) => {
+      this._config.container.removeEventListener(eventName, handler, this._config.capture);
     });
   }
 
 
-  _checkForSetNewStartParams(event, forceNewFinger) {
+  _checkForNewStartParams(event, forceNewFinger) {
     // event.changedTouches always contains only one finger - the finger which moved last and
     // therefore triggered the touchstart/move event. we store the identifier and use it for
     // getting the active finger index inside event.touches (which can contain multiple fingers)
@@ -173,17 +172,14 @@ export default class ShbTouch {
       this._private.timestamps.start = this._private.timestamps.move = Date.now();
 
       this._forXY((xy) => {
-
-        // RESET PREVIOUS TOUCH FLOW
-
+        // reset previous touch flow
         this._private.path[xy].length = 0;
         this._private.speed[xy].length = 0;
 
         this._private.direction[xy] = 0;
         this._private.prevDirection[xy] = 0;
 
-        // START NEW TOUCH FLOW
-
+        // start new touch flow
         this._private.path[xy].push(newTouchPoint[xy]);
       });
     }
@@ -191,46 +187,42 @@ export default class ShbTouch {
 
 
   _onTouchStart(event) {
-    if (!this._private.isEnabled) return;
+    if (this._state.isScrollingDisabled) return;
 
     this._state.isTouchActive = true;
     this.dispatchEvent(new Event(events.touchStart));
 
     // in case more than one finger is active, we assume that the necessary logic for checking if
-    // the movements should be ignored has already happened, no resetting required
+    // the movements should be ignored has already happened. no resetting is required
     if (event.touches.length < 2) {
       this._private.ignoreMovements = false;
       this._private.stopEvents = false;
       this._private.moveCount = 0;
     }
 
-    this._checkForSetNewStartParams(event, true);
+    this._checkForNewStartParams(event, true);
   }
 
 
   _onTouchMove(event) {
-    if (!this._private.isEnabled || this._private.ignoreMovements) return;
+    if (this._state.isScrollingDisabled || this._private.ignoreMovements) return;
 
     // we need to re-create all stored touch properties in case the finger changed. this function
     // checks if a new finger is active
-    this._checkForSetNewStartParams(event);
+    this._checkForNewStartParams(event);
 
     let newTouchPoint = this._eventToPoint(event);
 
     // if the ShbTouch is configured to lock movement in one direction, it will consider the first
     // two touchmove events to decide if:
-    //
     // - the movement is following the direction intended for scrolling the parent/owner,
     // therefore the original touchmove events should be suppressed (and ShbTouch will emit its own
     // pushBy and momentum events)
-    //
-    // or
-    //
-    // - the movement is following the direction intended for scrolling the nested element,
-    // therefore ShbTouch will return immediately without affecting the the original  touchmove event
+    // - or the movement is following the direction intended for scrolling the nested element,
+    // therefore ShbTouch will return immediately without affecting the the original touchmove event
     if (this._config.lock && this._private.moveCount < 2) {
-
       this._private.moveCount++;
+
       // a minimum of 2 movements is required to make an accurate assumption in what direction the
       // user moves his finger; if we have less, suppress the events and don't proceed
       if (this._private.moveCount < 2) {
@@ -245,7 +237,7 @@ export default class ShbTouch {
         distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
 
       // in case the movement of the finger has not followed the parent's scroll direction, stop
-      // here and ignore all further events (until a new touchstart)
+      // here and ignore all further events (until a new touchstart has happened)
       if (distanceOnOppositeAxis > distanceOnTargetAxis) {
         this._private.ignoreMovements = true;
         return;
@@ -324,9 +316,9 @@ export default class ShbTouch {
 
 
   _onTouchEnd(event) {
-    if (!this._private.isEnabled) return;
+    if (this._state.isScrollingDisabled) return;
 
-    // this forces the re-creation of all touch properties when calling _checkForSetNewStartParams()
+    // this forces the re-creation of all touch properties when calling _checkForNewStartParams()
     // on line 198 inside _onTouchMove()
     this._private.activeFinger = -1;
 
@@ -380,7 +372,7 @@ export default class ShbTouch {
 
 
   _onTouchCancel(event) {
-    if (!this._private.isEnabled) return;
+    if (this._state.isScrollingDisabled) return;
     this._state.isTouchActive = false;
   }
 
