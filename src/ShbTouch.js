@@ -76,7 +76,7 @@ let events = {
   pushBy: 'pushBy',
   touchStart: 'touchStart',
   touchEnd: 'touchEnd',
-  finishedTouchWithMomentum: 'finishedTouchWithMomentum'
+  touchEndWithMomentum: 'touchEndWithMomentum'
 };
 
 
@@ -374,7 +374,7 @@ export default class ShbTouch {
     });
 
     if (momentum.x.pxPerFrame > 0 || momentum.y.pxPerFrame > 0) {
-      this.dispatchEvent(new Event(events.finishedTouchWithMomentum), momentum);
+      this.dispatchEvent(new Event(events.touchEndWithMomentum), momentum);
     }
   }
 
