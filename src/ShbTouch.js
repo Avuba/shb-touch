@@ -18,15 +18,15 @@ let defaults = {
     // constructor
     axis: 'xy',
 
-    // TODO: add logic
+    // prevent the default action of all touchStart/Move/End/Cancel events
     preventDefault: false,
 
-    // TODO: add logic
+    // stop further propagation of all touchStart/Move/End/Cancel events
     stopEvents: false,
 
     // "stopEventsOnDirectionLock" is relevant if more touch/scroll libraries are at the same spot
     // (for example through nested elements) and only the one element using ShbTouch should move
-    // once the scroll direction has been determined. it has two possible effects:
+    // along the axis defined using the "axis" parameter. it has two possible effects:
     //
     // - #1: in case the user moves along the axis defined using the "axis" parameter, we prevent
     // the default action and stop all event propagation
@@ -52,7 +52,9 @@ let defaults = {
     ignoreMovements: false,
     stopEvents: false,
     moveCount: 0,
+    activeFinger: 0,
     startPoint: null,
+    axis: ['x', 'y'],
     path: {
       x: [],
       y: []
@@ -73,9 +75,7 @@ let defaults = {
     prevDirection: {
       x: 0,
       y: 0
-    },
-    axis: ['x', 'y'],
-    activeFinger: 0
+    }
   },
 
   state: {
@@ -201,6 +201,8 @@ export default class ShbTouch {
 
 
   _onTouchStart(event) {
+    if (this._config.preventDefault) event.preventDefault();
+    if (this._config.stopEvents) utils.stopEvent(event);
     if (this._state.isScrollingDisabled) return;
 
     this._state.isTouchActive = true;
@@ -219,6 +221,8 @@ export default class ShbTouch {
 
 
   _onTouchMove(event) {
+    if (this._config.preventDefault) event.preventDefault();
+    if (this._config.stopEvents) utils.stopEvent(event);
     if (this._state.isScrollingDisabled || this._private.ignoreMovements) return;
 
     // we need to re-create all stored touch and path properties in case the finger changed. this
@@ -326,10 +330,11 @@ export default class ShbTouch {
 
 
   _onTouchEnd(event) {
+    if (this._config.preventDefault) event.preventDefault();
+    if (this._config.stopEvents) utils.stopEvent(event);
     if (this._state.isScrollingDisabled) return;
 
     // this forces the re-creation of all touch properties when calling _checkForNewStartParams()
-    // on line 198 inside _onTouchMove()
     this._private.activeFinger = -1;
 
     // we don't trigger velocity scrolling or any other touchend interaction till we're sure that
@@ -382,7 +387,10 @@ export default class ShbTouch {
 
 
   _onTouchCancel(event) {
+    if (this._config.preventDefault) event.preventDefault();
+    if (this._config.stopEvents) utils.stopEvent(event);
     if (this._state.isScrollingDisabled) return;
+
     this._state.isTouchActive = false;
   }
 

@@ -12,7 +12,7 @@
       left: 10px;
       top: 10px;
       width: 300px;
-      height: 450px;
+      height: 700px;
       background: #eee;
       overflow: hidden;
     }
@@ -41,8 +41,8 @@
 
     var shbTouch1 = new ShbTouch({
       container: container1,
-      lock: false,
-      axis: 'x'
+      preventDefault: true,
+      stopEvents: true
     });
 
     shbTouch1.addEventListener(shbTouch1.events.pushBy, function(event) {
