@@ -40,7 +40,9 @@
       position1 = { x: 0, y: 0 };
 
     var shbTouch1 = new ShbTouch({
-      container: container1
+      container: container1,
+      lock: false,
+      axis: 'x'
     });
 
     shbTouch1.addEventListener(shbTouch1.events.pushBy, function(event) {
@@ -48,7 +50,7 @@
       position1.y += event.data.y.px * event.data.y.direction;
 
       moveable1.style.webkitTransform = 'translate3d(' + position1.x +'px, ' + position1.y + 'px, 0px)';
-    })
+    });
 
     shbTouch1.addEventListener(shbTouch1.events.touchEndWithMomentum, function(event) {
       var momentumX = event.data.x.pxPerFrame * event.data.x.direction,

@@ -18,9 +18,22 @@ let defaults = {
     // constructor
     axis: 'xy',
 
-    // lock movement in one direction. relevant if more touch/scroll libraries are at the same spot
-    // and only the locked element should move
-    lock: false,
+    // TODO: add logic
+    preventDefault: false,
+
+    // TODO: add logic
+    stopEvents: false,
+
+    // "stopEventsOnDirectionLock" is relevant if more touch/scroll libraries are at the same spot
+    // (for example through nested elements) and only the one element using ShbTouch should move
+    // once the scroll direction has been determined. it has two possible effects:
+    //
+    // - #1: in case the user moves along the axis defined using the "axis" parameter, we prevent
+    // the default action and stop all event propagation
+    //
+    // - #2: in case the user moves along the opposite axis, ignore all inputs till the user lifted
+    // his finger and started a new touch flow
+    stopEventsOnDirectionLock: false,
 
     // don't trigger momentum scrolling in case the distance between touchstart and touchEnd is less
     // than minPxForMomentum
@@ -89,10 +102,11 @@ export default class ShbTouch {
     if (config) lodash.merge(this._config, config);
 
     this._private.axis = this._config.axis.split('');
-    // lock is not possible in case the movement should follow two axis
-    if (this._private.axis.length > 1) this._config.lock = false;
-    // lock forces capture to be true
-    if (this._config.lock) this._config.capture = true;
+    // it's not possible to lock the direction in case the has allowed the X and the Y axis
+    if (this._private.axis.length > 1) this._config.stopEventsOnDirectionLock = false;
+    // "stopEventsOnDirectionLock" forces "capture" to be true as this is the only way to actually
+    // stop touch events from reaching potential elements below
+    if (this._config.stopEventsOnDirectionLock) this._config.capture = true;
 
     this.events = events;
     utils.addEventTargetInterface(this);
@@ -192,8 +206,8 @@ export default class ShbTouch {
     this._state.isTouchActive = true;
     this.dispatchEvent(new Event(events.touchStart));
 
-    // in case more than one finger is active, we assume that the necessary logic for checking if
-    // the movements should be ignored has already happened. no resetting is required
+    // don't reset the following values in case more than one finger is active, we assume that the
+    // necessary checks if the movement should be ignored have already happened
     if (event.touches.length < 2) {
       this._private.ignoreMovements = false;
       this._private.stopEvents = false;
@@ -207,24 +221,19 @@ export default class ShbTouch {
   _onTouchMove(event) {
     if (this._state.isScrollingDisabled || this._private.ignoreMovements) return;
 
-    // we need to re-create all stored touch properties in case the finger changed. this function
-    // checks if a new finger is active
+    // we need to re-create all stored touch and path properties in case the finger changed. this
+    // function checks if a new finger is active
     this._checkForNewStartParams(event);
 
     let newTouchPoint = this._eventToPoint(event);
 
-    // if the ShbTouch is configured to lock movement in one direction, it will consider the first
-    // two touchmove events to decide if:
-    // - the movement is following the direction intended for scrolling the parent/owner,
-    // therefore the original touchmove events should be suppressed (and ShbTouch will emit its own
-    // pushBy and momentum events)
-    // - or the movement is following the direction intended for scrolling the nested element,
-    // therefore ShbTouch will return immediately without affecting the the original touchmove event
-    if (this._config.lock && this._private.moveCount < 2) {
+    // if "stopEventsOnDirectionLock" is true, ShbTouch will check the first two touchmove events
+    // to determine the scroll direction and will not send out any "pushBy" events till then
+    if (this._config.stopEventsOnDirectionLock && this._private.moveCount < 2) {
       this._private.moveCount++;
 
-      // a minimum of 2 movements is required to make an accurate assumption in what direction the
-      // user moves his finger; if we have less, suppress the events and don't proceed
+      // stop the touchMove event from further propagation until the direction has been determined
+      // so any underlying scrollable elements do not move as well
       if (this._private.moveCount < 2) {
         event.preventDefault();
         utils.stopEvent(event);
@@ -236,14 +245,15 @@ export default class ShbTouch {
         distanceOnTargetAxis = Math.abs(newTouchPoint[targetAxis] - this._private.startPoint[targetAxis]),
         distanceOnOppositeAxis = Math.abs(newTouchPoint[oppositeAxis] - this._private.startPoint[oppositeAxis]);
 
-      // in case the movement of the finger has not followed the parent's scroll direction, stop
-      // here and ignore all further events (until a new touchstart has happened)
+      // in case the user does not move along the axis defined using the "axis" parameter, stop
+      // at this spot and ignore all further events (until a new touchstart has happened)
       if (distanceOnOppositeAxis > distanceOnTargetAxis) {
         this._private.ignoreMovements = true;
         return;
       }
 
-      // otherwise, stop propagation of further touchmove events
+      // in case the user follows the defined axis, stop the touchMove event from further
+      // propagation so any underlying scrollable elements do not move as well
       this._private.stopEvents = true;
     }
 
@@ -275,7 +285,7 @@ export default class ShbTouch {
 
       // relativeDelta === 0 usually happens when the user changes direction and the finger remains
       // at the same place for a few milliseconds. we asume a direction change and simple invert
-      // the direction
+      // the current direction
       if (relativeDelta === 0) {
         newDirection[xy] = this._private.direction[xy] * -1;
       }
