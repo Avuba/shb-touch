@@ -45,7 +45,7 @@
       stopEvents: true
     });
 
-    shbTouch1.addEventListener(shbTouch1.events.pushBy, function(event) {
+    shbTouch1.addEventListener(shbTouch1.events.touchPush, function(event) {
       position1.x += event.data.x.px * event.data.x.direction;
       position1.y += event.data.y.px * event.data.y.direction;
 
