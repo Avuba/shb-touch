@@ -86,8 +86,8 @@ let defaults = {
 
 
 let events = {
-  pushBy: 'pushBy',
   touchStart: 'touchStart',
+  touchPush: 'touchPush',
   touchEnd: 'touchEnd',
   touchEndWithMomentum: 'touchEndWithMomentum'
 };
@@ -232,7 +232,7 @@ export default class ShbTouch {
     let newTouchPoint = this._eventToPoint(event);
 
     // if "stopEventsOnDirectionLock" is true, ShbTouch will check the first two touchmove events
-    // to determine the scroll direction and will not send out any "pushBy" events till then
+    // to determine the scroll direction and will not send out any "touchPush" events till then
     if (this._config.stopEventsOnDirectionLock && this._private.moveCount < 2) {
       this._private.moveCount++;
 
@@ -266,7 +266,7 @@ export default class ShbTouch {
       utils.stopEvent(event);
     }
 
-    let pushBy = {
+    let touchPush = {
         x: { direction: 0, px: 0 },
         y: { direction: 0, px: 0 }
       },
@@ -314,18 +314,18 @@ export default class ShbTouch {
         this._private.path[xy].push(newTouchPoint[xy]);
       }
 
-      // COMMIT VALUES TO PUSHBY OBJECT
+      // COMMIT VALUES TO TOUCH PUSH OBJECT
 
-      pushBy[xy].direction = newDirection[xy];
-      pushBy[xy].px = Math.abs(relativeDelta);
+      touchPush[xy].direction = newDirection[xy];
+      touchPush[xy].px = Math.abs(relativeDelta);
     });
 
     this._private.prevDirection = this._private.direction
     this._private.direction = newDirection;
     this._private.timestamps.move = newTimeStamp;
 
-    if (pushBy.x.px === 0 && pushBy.y.px === 0) return;
-    this.dispatchEvent(new Event(events.pushBy), pushBy);
+    if (touchPush.x.px === 0 && touchPush.y.px === 0) return;
+    this.dispatchEvent(new Event(events.touchPush), touchPush);
   }
 
 
